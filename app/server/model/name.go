@@ -87,15 +87,15 @@ func GenPlanName(
 	}
 
 	var planName string
-	content := modelRes.Content
 
 	if baseModelConfig.PreferredOutputFormat == shared.ModelOutputFormatXml {
-		planName = utils.GetXMLContent(content, "planName")
+		planName = utils.GetXMLContent(modelRes.TextContent, "planName")
 		if planName == "" {
 			return "", fmt.Errorf("No planName tag found in XML response")
 		}
 	} else {
-		if content == "" {
+		content, ok := modelRes.ToolCallContent[prompts.PlanNameFn.Name]
+		if !ok || content == "" {
 			fmt.Println("no namePlan function call found in response")
 			return "", fmt.Errorf("No namePlan function call found in response. The model failed to generate a valid response.")
 		}
@@ -199,15 +199,15 @@ func GenPipedDataName(
 	}
 
 	var name string
-	content := modelRes.Content
 
 	if baseModelConfig.PreferredOutputFormat == shared.ModelOutputFormatXml {
-		name = utils.GetXMLContent(content, "name")
+		name = utils.GetXMLContent(modelRes.TextContent, "name")
 		if name == "" {
 			return "", fmt.Errorf("No name tag found in XML response")
 		}
 	} else {
-		if content == "" {
+		content, ok := modelRes.ToolCallContent[prompts.PipedDataNameFn.Name]
+		if !ok || content == "" {
 			fmt.Println("no namePipedData function call found in response")
 			return "", fmt.Errorf("No namePipedData function call found in response. The model failed to generate a valid response.")
 		}
@@ -297,15 +297,15 @@ func GenNoteName(
 	}
 
 	var name string
-	content := modelRes.Content
 
 	if baseModelConfig.PreferredOutputFormat == shared.ModelOutputFormatXml {
-		name = utils.GetXMLContent(content, "name")
+		name = utils.GetXMLContent(modelRes.TextContent, "name")
 		if name == "" {
 			return "", fmt.Errorf("No name tag found in XML response")
 		}
 	} else {
-		if content == "" {
+		content, ok := modelRes.ToolCallContent[prompts.NoteNameFn.Name]
+		if !ok || content == "" {
 			fmt.Println("no nameNote function call found in response")
 			return "", fmt.Errorf("No nameNote function call found in response. The model failed to generate a valid response.")
 		}

@@ -78,7 +78,7 @@ func PlanSummary(clients map[string]ClientInfo, authVars map[string]string, sett
 		}
 	}
 
-	summary := modelRes.Content
+	summary := modelRes.TextContent
 	if !strings.HasPrefix(summary, "## Summary of the plan so far:") {
 		summary = "## Summary of the plan so far:\n\n" + summary
 	}

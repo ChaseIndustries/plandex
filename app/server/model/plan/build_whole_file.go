@@ -126,7 +126,7 @@ func (fileState *activeBuildStreamFileState) buildWholeFileFallback(buildCtx con
 	fileState.builderRun.GenerationIds = append(fileState.builderRun.GenerationIds, modelRes.GenerationId)
 	fileState.builderRun.BuildWholeFileFinishedAt = time.Now()
 
-	content := modelRes.Content
+	content := modelRes.TextContent
 
 	// log.Printf("buildWholeFile - %s - content:\n%s\n", filePath, content)
 

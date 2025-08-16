@@ -165,14 +165,12 @@ func (state *activeTellStreamState) execStatusShouldContinue(currentMessage stri
 		return execStatusShouldContinueResult{}, nil
 	}
 
-	content := modelRes.Content
-
 	var reasoning string
 	var subtaskFinished bool
 
 	if baseModelConfig.PreferredOutputFormat == shared.ModelOutputFormatXml {
-		reasoning = utils.GetXMLContent(content, "reasoning")
-		subtaskFinishedStr := utils.GetXMLContent(content, "subtaskFinished")
+		reasoning = utils.GetXMLContent(modelRes.TextContent, "reasoning")
+		subtaskFinishedStr := utils.GetXMLContent(modelRes.TextContent, "subtaskFinished")
 		subtaskFinished = subtaskFinishedStr == "true"
 
 		if reasoning == "" || subtaskFinishedStr == "" {
@@ -186,8 +184,9 @@ func (state *activeTellStreamState) execStatusShouldContinue(currentMessage stri
 		}
 	} else {
 
-		if content == "" {
-			log.Printf("[ExecStatus] No function response found in model output")
+		content, ok := modelRes.ToolCallContent[prompts.DidFinishSubtaskFn.Name]
+		if !ok || content == "" {
+			log.Printf("[ExecStatus] No didFinishSubtask function response found in model output")
 			return execStatusShouldContinueResult{}, nil
 		}
 

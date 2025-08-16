@@ -44,7 +44,7 @@ type ModelRequestParams struct {
 	BeforeReq func()
 	AfterReq  func()
 
-	OnStream func(string, string) bool
+	OnStream func(string, string, map[string]string, map[string]string) bool
 
 	WillCacheNumTokens int
 }
@@ -147,14 +147,14 @@ func ModelRequest(
 	onStream := params.OnStream
 	if baseModelConfig.StopDisabled {
 		if len(stop) > 0 {
-			onStream = func(chunk string, buffer string) (shouldStop bool) {
+			onStream = func(chunk string, buffer string, toolCallChunks map[string]string, toolCallBuffers map[string]string) (shouldStop bool) {
 				for _, stopSequence := range stop {
 					if strings.Contains(buffer, stopSequence) {
 						return true
 					}
 				}
 				if params.OnStream != nil {
-					return params.OnStream(chunk, buffer)
+					return params.OnStream(chunk, buffer, toolCallChunks, toolCallBuffers)
 				}
 				return false
 			}
@@ -177,16 +177,16 @@ func ModelRequest(
 	}
 
 	if baseModelConfig.StopDisabled && len(stop) > 0 {
-		earliest := len(res.Content)
+		earliest := len(res.TextContent)
 		found := false
 		for _, s := range stop {
-			if i := strings.Index(res.Content, s); i != -1 && i < earliest {
+			if i := strings.Index(res.TextContent, s); i != -1 && i < earliest {
 				earliest = i
 				found = true
 			}
 		}
 		if found {
-			res.Content = res.Content[:earliest]
+			res.TextContent = res.TextContent[:earliest]
 		}
 	}
 
@@ -208,7 +208,7 @@ func ModelRequest(
 		outputTokens = res.Usage.CompletionTokens
 	} else {
 		inputTokens = inputTokensEstimate
-		outputTokens = shared.GetNumTokensEstimate(res.Content)
+		outputTokens = res.GetNumTokensEstimate()
 
 		if params.WillCacheNumTokens > 0 {
 			cachedTokens = params.WillCacheNumTokens
@@ -246,7 +246,7 @@ func ModelRequest(
 				RequestStartedAt: reqStarted,
 				Streaming:        true,
 				Req:              &req,
-				StreamResult:     res.Content,
+				StreamResult:     res.AllContent(),
 				ModelConfig:      modelConfig,
 				FirstTokenAt:     res.FirstTokenAt,
 				SessionId:        sessionId,

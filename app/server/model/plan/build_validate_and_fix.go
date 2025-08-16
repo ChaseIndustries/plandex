@@ -287,7 +287,9 @@ func (fileState *activeBuildStreamFileState) buildValidate(
 			log.Printf("Finished model request")
 			fileState.builderRun.ReplacementFinishedAt = time.Now()
 		},
-		OnStream: onStream,
+		OnStream: func(chunk string, buffer string, toolCallChunks map[string]string, toolCallBuffers map[string]string) bool {
+			return onStream(chunk, buffer)
+		},
 
 		WillCacheNumTokens:    willCacheNumTokens,
 		SessionId:             params.sessionId,
@@ -306,13 +308,13 @@ func (fileState *activeBuildStreamFileState) buildValidate(
 		return fileState.validationRetryOrError(ctx, params, err)
 	}
 
-	// log.Printf("Model response:\n\n%s", res.Content)
+	// log.Printf("Model response:\n\n%s", res.TextContent)
 
 	fileState.builderRun.GenerationIds = append(fileState.builderRun.GenerationIds, res.GenerationId)
 	log.Printf("Added generation ID: %s", res.GenerationId)
 
 	// Handle response based on format
-	parseRes, err := handleXMLResponse(fileState, res.Content, originalWithLineNums, updated, params.validateOnly)
+	parseRes, err := handleXMLResponse(fileState, res.TextContent, originalWithLineNums, updated, params.validateOnly)
 
 	if err != nil {
 		log.Printf("Error handling response: %v", err)

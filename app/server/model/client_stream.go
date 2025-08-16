@@ -14,7 +14,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-type OnStreamFn func(chunk string, buffer string) (shouldStop bool)
+type OnStreamFn func(textChunk string, textBuffer string, toolCallChunks map[string]string, toolCallBuffers map[string]string) (shouldStop bool)
 
 func CreateChatCompletionWithInternalStream(
 	clients map[string]ClientInfo,
@@ -169,7 +169,8 @@ func processChatCompletionStream(
 			}
 
 			emptyChoices := false
-			var content string
+			var textContent string
+			toolCallContent := map[string]string{}
 
 			if len(response.Choices) == 0 {
 				// Previously we'd return an error if there were no choices, but some models do this and then keep streaming, so we'll just log it and continue
@@ -203,22 +204,25 @@ func processChatCompletionStream(
 					}
 				}
 
-				if req.Tools != nil {
-					if choice.Delta.ToolCalls != nil {
-						toolCall := choice.Delta.ToolCalls[0]
-						content = toolCall.Function.Arguments
+				// technically there could be multiple tool calls for the *same* function name in the same chunk when parallel tool calls are interleaved, but we have no use case for that so far, so will just key by function name
+				if req.Tools != nil && choice.Delta.ToolCalls != nil {
+					for _, toolCall := range choice.Delta.ToolCalls {
+						toolCallContent[toolCall.Function.Name] = toolCall.Function.Arguments
 					}
-				} else {
-					if choice.Delta.Content != "" {
-						content = choice.Delta.Content
-					}
+				}
+
+				if choice.Delta.Content != "" {
+					textContent = choice.Delta.Content
 				}
 			}
 
-			accumulator.AddContent(content)
+			accumulator.AddTextContent(textContent)
+			for toolName, content := range toolCallContent {
+				accumulator.AddToolCallContent(toolName, content)
+			}
 			// pass the chunk and the accumulated content to the callback
 			if onStream != nil {
-				shouldReturn := onStream(content, accumulator.Content())
+				shouldReturn := onStream(textContent, accumulator.TextContent(), toolCallContent, accumulator.ToolCallContent())
 				if shouldReturn {
 					return accumulator.Result(false, nil), nil
 				}

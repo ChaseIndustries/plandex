@@ -122,12 +122,10 @@ func (state *activeTellStreamState) genPlanDescription() (*db.ConvoMessageDescri
 
 	log.Println("Plan description model call complete")
 
-	content := modelRes.Content
-
 	var commitMsg string
 
 	if baseModelConfig.PreferredOutputFormat == shared.ModelOutputFormatXml {
-		commitMsg = utils.GetXMLContent(content, "commitMsg")
+		commitMsg = utils.GetXMLContent(modelRes.TextContent, "commitMsg")
 		if commitMsg == "" {
 			go notify.NotifyErr(notify.SeverityError, fmt.Errorf("no commitMsg tag found in XML response"))
 
@@ -139,7 +137,8 @@ func (state *activeTellStreamState) genPlanDescription() (*db.ConvoMessageDescri
 		}
 	} else {
 
-		if content == "" {
+		content, ok := modelRes.ToolCallContent[prompts.DescribePlanFn.Name]
+		if !ok || content == "" {
 			fmt.Println("no describePlan function call found in response")
 
 			go notify.NotifyErr(notify.SeverityError, fmt.Errorf("no describePlan function call found in response"))
@@ -251,7 +250,7 @@ func GenCommitMsgForPendingResults(params GenCommitMsgForPendingResultsParams) (
 		return "", err
 	}
 
-	content := modelRes.Content
+	content := modelRes.TextContent
 
 	if content == "" {
 		return "", fmt.Errorf("no response from model")

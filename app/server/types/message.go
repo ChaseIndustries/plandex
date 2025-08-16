@@ -254,33 +254,56 @@ type ExtendedChatCompletionStreamResponse struct {
 
 // ModelResponse holds both the accumulated content and final usage information from a streaming completion request
 type ModelResponse struct {
-	Content      string        `json:"content"`
-	Usage        *openai.Usage `json:"usage,omitempty"`
-	Stopped      bool          `json:"stopped,omitempty"`
-	Error        string        `json:"error,omitempty"`
-	GenerationId string        `json:"generation_id,omitempty"`
-	FirstTokenAt time.Time     `json:"first_token_at,omitempty"`
+	ToolCallContent map[string]string `json:"tool_call_content,omitempty"`
+	TextContent     string            `json:"text_content,omitempty"`
+	Usage           *openai.Usage     `json:"usage,omitempty"`
+	Stopped         bool              `json:"stopped,omitempty"`
+	Error           string            `json:"error,omitempty"`
+	GenerationId    string            `json:"generation_id,omitempty"`
+	FirstTokenAt    time.Time         `json:"first_token_at,omitempty"`
+}
+
+func (r *ModelResponse) AllContent() string {
+	content := r.TextContent
+	for _, toolCallContent := range r.ToolCallContent {
+		content += toolCallContent
+	}
+	return content
+}
+
+func (r *ModelResponse) GetNumTokensEstimate() int {
+	return shared.GetNumTokensEstimate(r.AllContent())
 }
 
 // StreamCompletionAccumulator accumulates content and tracks usage from streaming chunks
 type StreamCompletionAccumulator struct {
-	content      strings.Builder
-	usage        *openai.Usage
-	generationId string
-	firstTokenAt time.Time
+	textContent     strings.Builder
+	toolCallContent map[string]*strings.Builder
+	usage           *openai.Usage
+	generationId    string
+	firstTokenAt    time.Time
 }
 
 // NewStreamCompletionAccumulator creates a new StreamCompletionAccumulator
 func NewStreamCompletionAccumulator() *StreamCompletionAccumulator {
 	return &StreamCompletionAccumulator{
-		content: strings.Builder{},
-		usage:   nil,
+		textContent:     strings.Builder{},
+		toolCallContent: map[string]*strings.Builder{},
+		usage:           nil,
 	}
 }
 
-// AddContent appends new content from a streaming chunk
-func (a *StreamCompletionAccumulator) AddContent(content string) {
-	a.content.WriteString(content)
+func (a *StreamCompletionAccumulator) AddTextContent(textContent string) {
+	a.textContent.WriteString(textContent)
+}
+
+func (a *StreamCompletionAccumulator) AddToolCallContent(toolName string, content string) {
+	builder, ok := a.toolCallContent[toolName]
+	if !ok {
+		builder = &strings.Builder{}
+		a.toolCallContent[toolName] = builder
+	}
+	builder.WriteString(content)
 }
 
 // SetUsage sets the usage information, typically from the final chunk
@@ -296,8 +319,16 @@ func (a *StreamCompletionAccumulator) SetFirstTokenAt(firstTokenAt time.Time) {
 	a.firstTokenAt = firstTokenAt
 }
 
-func (a *StreamCompletionAccumulator) Content() string {
-	return a.content.String()
+func (a *StreamCompletionAccumulator) TextContent() string {
+	return a.textContent.String()
+}
+
+func (a *StreamCompletionAccumulator) ToolCallContent() map[string]string {
+	toolCallContent := map[string]string{}
+	for toolName, content := range a.toolCallContent {
+		toolCallContent[toolName] = content.String()
+	}
+	return toolCallContent
 }
 
 // Result creates a StreamCompletionResult from the accumulated content and usage
@@ -307,12 +338,18 @@ func (a *StreamCompletionAccumulator) Result(stopped bool, err error) *ModelResp
 		errStr = err.Error()
 	}
 
+	toolCallContent := map[string]string{}
+	for toolName, content := range a.toolCallContent {
+		toolCallContent[toolName] = content.String()
+	}
+
 	return &ModelResponse{
-		Content:      a.content.String(),
-		Usage:        a.usage,
-		Stopped:      stopped,
-		Error:        errStr,
-		GenerationId: a.generationId,
-		FirstTokenAt: a.firstTokenAt,
+		TextContent:     a.textContent.String(),
+		ToolCallContent: toolCallContent,
+		Usage:           a.usage,
+		Stopped:         stopped,
+		Error:           errStr,
+		GenerationId:    a.generationId,
+		FirstTokenAt:    a.firstTokenAt,
 	}
 }
