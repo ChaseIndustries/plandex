@@ -27,11 +27,27 @@ type ExtendedChatMessagePart struct {
 }
 
 type ExtendedChatMessage struct {
-	Role    string                    `json:"role"`
-	Content []ExtendedChatMessagePart `json:"content"`
+	Role       string                    `json:"role"`
+	Content    []ExtendedChatMessagePart `json:"content"`
+	ToolCallID string                    `json:"tool_call_id,omitempty"` // For tool response messages
+	Name       string                    `json:"name,omitempty"`         // Tool/function name for tool messages
 }
 
 func (msg *ExtendedChatMessage) ToOpenAI() *openai.ChatCompletionMessage {
+	// Handle tool response messages
+	if msg.Role == "tool" {
+		var content string
+		if len(msg.Content) > 0 && msg.Content[0].Type == "text" {
+			content = msg.Content[0].Text
+		}
+		return &openai.ChatCompletionMessage{
+			Role:       msg.Role,
+			Content:    content,
+			ToolCallID: msg.ToolCallID,
+			Name:       msg.Name,
+		}
+	}
+
 	// If there's only one part and it's text, use simple Content field
 	if len(msg.Content) == 1 && msg.Content[0].Type == "text" {
 		return &openai.ChatCompletionMessage{
