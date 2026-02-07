@@ -1,0 +1,11 @@
+{
+    "build": {
+      "builder": "NIXPACKS",
+      "buildCommand": "sh -lc 'if [ -f go.mod ] && [ -f main.go ]; then :; elif [ -d app/server ]; then cd app/server; elif [ -d server ]; then cd server; else echo \"server dir not found\" && exit 1; fi; go build -o plandex-server main.go'"
+    },
+    "deploy": {
+      "startCommand": "sh -lc 'if [ -f plandex-server ]; then :; elif [ -d app/server ]; then cd app/server; elif [ -d server ]; then cd server; else echo \"server dir not found\" && exit 1; fi; ./plandex-server'",
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10
+    }
+  }

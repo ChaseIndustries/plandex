@@ -34,12 +34,10 @@ COPY ./app/scripts /scripts
 
 # Build the server
 WORKDIR /app/server
-RUN rm -f /app/plandex-server && go build -o /app/plandex-server .
+RUN rm -f plandex-server && go build -o plandex-server .
 
 # Default runtime config
 ENV PORT=8099
-ENV PLANDEX_BASE_DIR=/plandex-server
-RUN mkdir -p /plandex-server
-
 EXPOSE 8099
-CMD ["/app/plandex-server"]
+
+CMD ["./plandex-server"]
