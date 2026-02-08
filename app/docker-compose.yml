@@ -23,7 +23,8 @@ services:
       - "8099:8099"
       - "4000:4000"
     environment:
-      DATABASE_URL: "postgres://plandex:plandex@plandex-postgres:5432/plandex?sslmode=disable"
+      # Set DATABASE_URL in .env or host env (e.g. Railway); defaults to local postgres
+      DATABASE_URL: ${DATABASE_URL:-postgres://plandex:plandex@plandex-postgres:5432/plandex?sslmode=disable}
       GOENV: development
       LOCAL_MODE: 1
       PLANDEX_BASE_DIR: /plandex-server
@@ -33,9 +34,8 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - plandex-network
-    depends_on:
-      - plandex-postgres
-    command: [ "/bin/sh", "-c", "/scripts/wait-for-it.sh plandex-postgres:5432 -- ./plandex-server" ]
+    # No depends_on: with external DB (e.g. Railway) run only plandex-server. For local postgres, run both (docker compose up).
+    command: [ "./plandex-server" ]
 
 networks:
   plandex-network:
