@@ -30,6 +30,8 @@ func EnsureHandlePlandex() {
 func AddHealthRoutes(r *mux.Router) {
 	EnsureHandlePlandex()
 
+	HandlePlandexFn(r, "/fix_build", false, handlers.FixBuildHandler).Methods("POST")
+
 	HandlePlandexFn(r, "/health", false, func(w http.ResponseWriter, r *http.Request) {
 		_, apiErr := hooks.ExecHook(hooks.HealthCheck, hooks.HookParams{})
 		if apiErr != nil {
